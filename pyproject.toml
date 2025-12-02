@@ -1,0 +1,30 @@
+[project]
+name = "kbackup"
+version = "0.1"
+description = "kubernetes manifest backup with well-structured folder"
+readme = "README.md"
+authors = [{name = "Ahmad Bayhaqi"}]
+license = "Apache-2.0"
+requires-python = ">=3.10"
+classifiers = []
+dependencies = [
+    "click",
+    "kubernetes",
+    "jq"
+]
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project.urls]
+Homepage = "https://github.com/Kyuubang/kbackup"
+Changelog = "https://github.com/Kyuubang/kbackup/releases"
+Issues = "https://github.com/Kyuubang/kbackup/issues"
+CI = "https://github.com/Kyuubang/kbackup/actions"
+
+[project.scripts]
+kbackup = "kbackup.cli:cli"
+
+[project.optional-dependencies]
+test = ["pytest"]
