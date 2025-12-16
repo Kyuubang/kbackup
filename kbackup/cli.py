@@ -48,12 +48,18 @@ def cli():
     type=click.Path(file_okay=False),
     help="Directory for backup output (default: ./backup)",
 )
+@click.option(
+    "--ingress-first",
+    is_flag=True,
+    help="Organize backup by ingress first, then backup deployments without ingress",
+)
 def cluster_backup(
     context: str,
     jq_filter: str,
     exclude_namespaces: Tuple[str, ...],
     dry_run: bool,
     output_dir: Optional[str],
+    ingress_first: bool,
 ) -> None:
     """
     Backup Kubernetes cluster manifests.
@@ -61,6 +67,7 @@ def cluster_backup(
     Backup all deployments and their associated resources from a Kubernetes cluster.
     Use --filter to customize manifest field filtering with jq syntax.
     Use --exclude to skip specific namespaces.
+    Use --ingress-first to organize backup by ingress first.
     """
     try:
         backup_service = ClusterBackupService(
@@ -68,6 +75,7 @@ def cluster_backup(
             jq_filter=jq_filter,
             exclude_namespaces=exclude_namespaces,
             output_dir=output_dir,
+            ingress_first=ingress_first,
         )
         
         click.echo(f"Starting backup for cluster context: {context}")

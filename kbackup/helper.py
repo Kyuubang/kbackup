@@ -10,17 +10,20 @@ import logging
 class GetDeploymentAssociations:
     """Handles discovery of associated Kubernetes resources for deployments."""
     
-    def __init__(self, v1_client: Any, networking_v1_client: Any, autoscale_v1_client: Any):
+    def __init__(self, v1_client: Any, networking_v1_client: Any, autoscale_v1_client: Any, apps_v1_client: Optional[Any] = None):
         """
         Initialize with Kubernetes API clients.
         
         Args:
             v1_client: CoreV1Api client
             networking_v1_client: NetworkingV1Api client
+            autoscale_v1_client: AutoscalingV1Api client
+            apps_v1_client: AppsV1Api client (optional)
         """
         self.v1 = v1_client
         self.networking_v1 = networking_v1_client
         self.autoscale_v1 = autoscale_v1_client
+        self.apps = apps_v1_client
 
     def get_associated_service(self, deployment, namespace: str) -> Optional[str]:
         services = self.v1.list_namespaced_service(namespace=namespace)
@@ -118,7 +121,61 @@ class GetDeploymentAssociations:
         for volume in volumes:
             if getattr(volume, 'secret', None) is not None:
                 result.append(volume.secret.secret_name)
-        return result if result else None  
+        return result if result else None
+
+    def get_associated_pvc(self, deployment) -> Optional[List[str]]:
+        """
+        Retrieve names of PersistentVolumeClaims associated with the given deployment.
+        
+        Args:
+            deployment: Kubernetes Deployment object
+            
+        Returns:
+            Optional[List[str]]: List of PVC names, or None if no PVCs exist
+        """
+        volumes = deployment.spec.template.spec.volumes
+        if not isinstance(volumes, list):
+            return None
+        
+        result = []
+        for volume in volumes:
+            if getattr(volume, 'persistent_volume_claim', None) is not None:
+                result.append(volume.persistent_volume_claim.claim_name)
+        
+        return result if result else None
+
+    def get_deployments_for_service(self, service_name: str, namespace: str) -> Optional[List[str]]:
+        """
+        Find all deployments that target a specific service by matching selector labels.
+        
+        Args:
+            service_name: Service name to find deployments for
+            namespace: Kubernetes namespace
+            
+        Returns:
+            Optional[List[str]]: List of deployment names, or None if none found
+        """
+        try:
+            # Get the service to find its selector labels
+            service = self.v1.read_namespaced_service(name=service_name, namespace=namespace)
+            if not service.spec.selector:
+                return None
+            
+            service_selector = service.spec.selector
+            
+            # List all deployments and find those matching the service selector
+            deployments = self.apps.list_namespaced_deployment(namespace=namespace)
+            
+            matched_deployments = []
+            for deploy in deployments.items:
+                if deploy.spec.selector.match_labels == service_selector:
+                    matched_deployments.append(deploy.metadata.name)
+            
+            return matched_deployments if matched_deployments else None
+            
+        except Exception as e:
+            return None
+  
 
 class Serializer:
     """Handles serialization of Kubernetes resources to dictionary format."""
@@ -207,6 +264,27 @@ class Serializer:
         hpa = self.autoscale.read_namespaced_horizontal_pod_autoscaler(name=hpa_name, namespace=namespace)
         if hpa:
             return self._kubernetes_serializer(hpa)
+        return None
+
+    def get_pvc(self, pvc_name: Optional[str], namespace: str) -> Optional[Dict[str, Any]]:
+        """
+        Retrieve a PersistentVolumeClaim by name.
+        
+        Args:
+            pvc_name: PVC name
+            namespace: Kubernetes namespace
+            
+        Returns:
+            Optional[Dict[str, Any]]: Serialized PVC data, or None if not found
+        """
+        if not pvc_name:
+            return None
+        try:
+            pvc = self.v1.read_namespaced_persistent_volume_claim(name=pvc_name, namespace=namespace)
+            if pvc:
+                return self._kubernetes_serializer(pvc)
+        except Exception as e:
+            return None
         return None
 
 
@@ -308,6 +386,38 @@ class YAMLFormatter:
         else:
             return data
 
+    def _remove_empty_values(self, data: Any) -> Any:
+        """
+        Recursively remove empty dictionaries, empty lists, and None values.
+        
+        Args:
+            data: Data structure to process
+            
+        Returns:
+            Data with empty values removed
+        """
+        if isinstance(data, dict):
+            # Filter out None values and empty dicts/lists, then recursively process remaining values
+            cleaned = {
+                k: self._remove_empty_values(v)
+                for k, v in data.items()
+                if v is not None  # Skip None values
+            }
+            # Remove entries where the value became empty after recursive cleaning
+            return {
+                k: v for k, v in cleaned.items()
+                if not (isinstance(v, (dict, list)) and len(v) == 0)
+            }
+        elif isinstance(data, list):
+            # Filter out None values and empty dicts/lists from lists
+            return [
+                self._remove_empty_values(item)
+                for item in data
+                if item is not None and not (isinstance(item, (dict, list)) and len(item) == 0)
+            ]
+        else:
+            return data
+
     def format_kubernetes_resource(self, data: Union[Dict, List, Any], jq_filter: str) -> str:
         """
         Format a general Kubernetes resource with jq filtering and YAML formatting.
@@ -328,6 +438,9 @@ class YAMLFormatter:
             
             # Fix any escaped newlines
             result = self._fix_multiline_strings(result)
+            
+            # Remove empty values (annotations, labels, etc)
+            result = self._remove_empty_values(result)
             
             # Convert to YAML
             yaml_data = yaml.dump(result, **self._yaml_options)
@@ -360,6 +473,9 @@ class YAMLFormatter:
             
             # Special handling for SecretProviderClass objects field
             self._process_spc_objects_field(result)
+            
+            # Remove empty values (annotations, labels, etc)
+            result = self._remove_empty_values(result)
             
             # Convert to YAML
             yaml_data = yaml.dump(result, **self._yaml_options)
