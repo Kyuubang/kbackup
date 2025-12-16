@@ -21,5 +21,6 @@ del(
     .spec.clusterIP,
     .spec.progressDeadlineSeconds,
     .spec.template.metadata.creationTimestamp,
+    .spec.template.metadata.annotations."kubectl.kubernetes.io/restartedAt",
     .status
 )

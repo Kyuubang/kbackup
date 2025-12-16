@@ -28,3 +28,6 @@ kbackup = "kbackup.cli:cli"
 
 [project.optional-dependencies]
 test = ["pytest"]
+
+[tool.setuptools]
+packages = ["kbackup"]
