@@ -316,7 +316,7 @@ class ClusterBackupService:
         try:
             service = self.associations.get_associated_service(deployment, namespace)
             if service:
-                
+                logger.info(f"Backing up service: {service} for deployment: {deploy_name}")
                 service_data = self.serializer.get_service(service, namespace)
                 service_yaml = self.yaml_formatter.format_kubernetes_resource(
                     service_data, self.jq_filter
@@ -344,6 +344,7 @@ class ClusterBackupService:
             secret_providers = self.associations.get_associated_secretprovider(deployment)
             if secret_providers:
                 for spc in secret_providers:
+                    logger.info(f"Backing up SecretProviderClass: {spc['secret_provider_class']} for deployment: {deploy_name}")
                     spc_name = spc['secret_provider_class']
                     spc_data = self.serializer.get_secretprovider(spc_name, namespace)
                     spc_yaml = self.yaml_formatter.format_secret_provider_class(
@@ -353,11 +354,13 @@ class ClusterBackupService:
         except Exception as e:
             logger.warning(f"Failed to backup SecretProviderClass for {deploy_name}: {e}")
         
+        # backup associated ConfigMaps
         try:
             configmaps = self.associations.get_associated_configmap(deployment)
             if configmaps:
                 cm_yamls = []
                 for cm_name in configmaps:
+                    logger.info(f"Backing up ConfigMap: {cm_name} for deployment: {deploy_name}")
                     cm_data = self.serializer.get_configmap(cm_name, namespace)
                     cm_yaml = self.yaml_formatter.format_kubernetes_resource(
                         cm_data, self.jq_filter
@@ -367,11 +370,13 @@ class ClusterBackupService:
         except Exception as e:
             logger.warning(f"Failed to backup ConfigMaps for {deploy_name}: {e}")
         
+        # backup associated secret 
         try:
             secrets = self.associations.get_associated_secret(deployment)
             if secrets:
                 secret_yamls = []
                 for secret_name in secrets:
+                    logger.info(f"Backing up Secret: {secret_name} for deployment: {deploy_name}")
                     secret_data = self.serializer.get_secret(secret_name, namespace)
                     secret_yaml = self.yaml_formatter.format_kubernetes_resource(
                         secret_data, self.jq_filter
@@ -381,12 +386,14 @@ class ClusterBackupService:
         except Exception as e:
             logger.warning(f"Failed to backup Secrets for {deploy_name}: {e}")
         
+        # backup associated pvc
         try:
             pvcs = self.associations.get_associated_pvc(deployment)
             if pvcs:
                 pvc_yamls = []
                 for pvc_name in pvcs:
                     try:
+                        logger.info(f"Backing up PVC: {pvc_name} for deployment: {deploy_name}")
                         pvc_data = self.serializer.get_pvc(pvc_name, namespace)
                         if pvc_data:
                             pvc_yaml = self.yaml_formatter.format_kubernetes_resource(
@@ -400,9 +407,11 @@ class ClusterBackupService:
         except Exception as e:
             logger.warning(f"Failed to backup PVCs for {deploy_name}: {e}")
         
+        # backup associated hpa
         try:
             hpa = self.associations.get_associated_hpa(deployment)
             if hpa:
+                logger.info(f"Backing up HPA: {hpa} for deployment: {deploy_name}")
                 hpa_data = self.serializer.get_hpa(hpa, namespace)
                 hpa_yaml = self.yaml_formatter.format_kubernetes_resource(
                     hpa_data, self.jq_filter
@@ -437,7 +446,7 @@ class ClusterBackupService:
         except Exception as e:
             logger.error(f"Failed to backup deployment {deploy_name}: {e}")
         
-        # Backup associated resources
+        # Backup associated service
         try:
             service = self.associations.get_associated_service(deployment, namespace)
             if service:
@@ -450,6 +459,7 @@ class ClusterBackupService:
         except Exception as e:
             logger.warning(f"Failed to backup service for {deploy_name}: {e}")
         
+        # backup assciated ingress
         try:
             service_name = self.associations.get_associated_service(deployment, namespace)
             ingress = self.associations.get_associated_ingress(service_name, namespace)
@@ -463,6 +473,7 @@ class ClusterBackupService:
         except Exception as e:
             logger.warning(f"Failed to backup ingress for {deploy_name}: {e}")
         
+        # backup associated Secretprovider
         try:
             secret_providers = self.associations.get_associated_secretprovider(deployment)
             if secret_providers:
@@ -477,6 +488,7 @@ class ClusterBackupService:
         except Exception as e:
             logger.warning(f"Failed to backup SecretProviderClass for {deploy_name}: {e}")
         
+        # backup associated ConfigMaps
         try:
             configmaps = self.associations.get_associated_configmap(deployment)
             if configmaps:
@@ -492,6 +504,7 @@ class ClusterBackupService:
         except Exception as e:
             logger.warning(f"Failed to backup ConfigMaps for {deploy_name}: {e}")
         
+        # backup associated secret
         try:
             secrets = self.associations.get_associated_secret(deployment)
             if secrets:
@@ -507,6 +520,7 @@ class ClusterBackupService:
         except Exception as e:
             logger.warning(f"Failed to backup Secrets for {deploy_name}: {e}")
         
+        # backup associated hpa
         try:
             hpa = self.associations.get_associated_hpa(deployment)
             if hpa:
