@@ -1,6 +1,5 @@
 import click
 import logging
-from pathlib import Path
 from typing import Optional, Tuple
 
 from kbackup.backup import ClusterBackupService

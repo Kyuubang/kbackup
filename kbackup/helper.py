@@ -1,7 +1,6 @@
 import json
 import yaml
 import jq
-import os
 from pathlib import Path
 from typing import Dict, List, Any, Union, Optional
 import logging
@@ -173,7 +172,7 @@ class GetDeploymentAssociations:
             
             return matched_deployments if matched_deployments else None
             
-        except Exception as e:
+        except Exception:
             return None
   
 
@@ -283,7 +282,7 @@ class Serializer:
             pvc = self.v1.read_namespaced_persistent_volume_claim(name=pvc_name, namespace=namespace)
             if pvc:
                 return self._kubernetes_serializer(pvc)
-        except Exception as e:
+        except Exception:
             return None
         return None
 
@@ -929,7 +928,7 @@ class FileManager:
                 # Try both formats
                 try:
                     config_data = yaml.safe_load(config_content)
-                except:
+                except yaml.YAMLError:
                     config_data = json.loads(config_content)
             
             # Validate config structure

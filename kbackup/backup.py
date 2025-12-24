@@ -316,6 +316,7 @@ class ClusterBackupService:
         try:
             service = self.associations.get_associated_service(deployment, namespace)
             if service:
+                
                 service_data = self.serializer.get_service(service, namespace)
                 service_yaml = self.yaml_formatter.format_kubernetes_resource(
                     service_data, self.jq_filter
@@ -425,6 +426,7 @@ class ClusterBackupService:
         try:
             service = self.associations.get_associated_service(deployment, namespace)
             if service:
+                logger.info(f"Backing up service: {service} for deployment: {deploy_name}")
                 service_data = self.serializer.get_service(service, namespace)
                 service_yaml = self.yaml_formatter.format_kubernetes_resource(
                     service_data, self.jq_filter
@@ -437,6 +439,7 @@ class ClusterBackupService:
             service_name = self.associations.get_associated_service(deployment, namespace)
             ingress = self.associations.get_associated_ingress(service_name, namespace)
             if ingress:
+                logger.info(f"Backing up ingress: {ingress} for deployment: {deploy_name}")
                 ingress_data = self.serializer.get_ingress(ingress, namespace)
                 ingress_yaml = self.yaml_formatter.format_kubernetes_resource(
                     ingress_data, self.jq_filter
@@ -450,6 +453,7 @@ class ClusterBackupService:
             if secret_providers:
                 for spc in secret_providers:
                     spc_name = spc['secret_provider_class']
+                    logger.info(f"Backing up SecretProviderClass: {spc_name} for deployment: {deploy_name}")
                     spc_data = self.serializer.get_secretprovider(spc_name, namespace)
                     spc_yaml = self.yaml_formatter.format_secret_provider_class(
                         spc_data, self.jq_filter
@@ -463,6 +467,7 @@ class ClusterBackupService:
             if configmaps:
                 cm_yamls = []
                 for cm_name in configmaps:
+                    logger.info(f"Backing up ConfigMap: {cm_name} for deployment: {deploy_name}")
                     cm_data = self.serializer.get_configmap(cm_name, namespace)
                     cm_yaml = self.yaml_formatter.format_kubernetes_resource(
                         cm_data, self.jq_filter
@@ -477,6 +482,7 @@ class ClusterBackupService:
             if secrets:
                 secret_yamls = []
                 for secret_name in secrets:
+                    logger.info(f"Backing up Secret: {secret_name} for deployment: {deploy_name}")
                     secret_data = self.serializer.get_secret(secret_name, namespace)
                     secret_yaml = self.yaml_formatter.format_kubernetes_resource(
                         secret_data, self.jq_filter
@@ -489,6 +495,7 @@ class ClusterBackupService:
         try:
             hpa = self.associations.get_associated_hpa(deployment)
             if hpa:
+                logger.info(f"Backing up HPA: {hpa} for deployment: {deploy_name}")
                 hpa_data = self.serializer.get_hpa(hpa, namespace)
                 hpa_yaml = self.yaml_formatter.format_kubernetes_resource(
                     hpa_data, self.jq_filter
