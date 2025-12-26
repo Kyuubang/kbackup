@@ -637,7 +637,14 @@ class FileManager:
             # Create directory structure
             path_obj.mkdir(parents=True, exist_ok=True)
 
-            self.logger.info(f"Directory created/verified: {path_obj.absolute()}")
+            # Try to log relative path, fallback to absolute if not possible
+            try:
+                display_path = path_obj.resolve().relative_to(Path.cwd().resolve())
+            except ValueError:
+                # Path is not relative to cwd, use absolute path
+                display_path = path_obj.resolve()
+            
+            self.logger.info(f"Directory created/verified: {display_path}")
             return path_obj
 
         except Exception as e:
