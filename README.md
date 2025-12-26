@@ -5,6 +5,8 @@
 [![Tests](https://github.com/Kyuubang/kbackup/actions/workflows/test.yml/badge.svg)](https://github.com/Kyuubang/kbackup/actions/workflows/test.yml)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](https://github.com/Kyuubang/kbackup/blob/master/LICENSE)
 
+![demo](https://github.com/user-attachments/assets/bd19b5b8-20b2-4730-986f-3cba3e23f5ab)
+
 kubernetes manifest backup with well-structured folder
 
 ## Installation
