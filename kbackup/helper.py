@@ -1062,7 +1062,3 @@ class FileManager:
         except Exception as e:
             self.logger.error(f"Failed to create backup from config file: {e}")
             raise
-
-
-# Backward compatibility alias
-Formatter = YAMLFormatter
