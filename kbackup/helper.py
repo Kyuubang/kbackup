@@ -547,27 +547,6 @@ class YAMLFormatter:
             self.logger.error(f"Failed to format SecretProviderClass: {e}")
             raise RuntimeError(f"Error formatting SecretProviderClass: {e}") from e
 
-    # def format_spc_objects(self, spc_data, jq_filter):
-    #     """Specialized function to format SecretProviderClass with proper block style for objects field"""
-    #     try:
-    #         # Apply jq filter first
-    #         json_data = json.dumps(spc_data)
-    #         data_interface = json.loads(json_data)
-    #         result = jq.compile(jq_filter).input(data_interface).first()
-
-    #         # Post-process the objects field to fix the newlines
-    #         if 'spec' in result and 'parameters' in result['spec'] and 'objects' in result['spec']['parameters']:
-    #             objects_str = result['spec']['parameters']['objects']
-    #             # Convert escaped newlines back to actual newlines
-    #             if '\\n' in objects_str:
-    #                 result['spec']['parameters']['objects'] = objects_str.replace('\\n', '\n')
-
-    #         # Convert to YAML using BlockStyleDumper
-    #         yaml_data = yaml.dump(result, Dumper=BlockStyleDumper, sort_keys=False, default_flow_style=False)
-    #         return yaml_data
-    #     except Exception as e:
-    #         raise RuntimeError(f"Error in format_spc_objects: {e}")
-
     def _process_spc_objects_field(self, spc_data: Dict[str, Any]) -> None:
         """
         Process the objects field in SecretProviderClass data to fix newlines.
