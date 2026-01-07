@@ -128,6 +128,9 @@ class GetDeploymentAssociations:
             if getattr(volume, "config_map", None) is not None:
                 result.append(volume.config_map.name)
 
+        if not isinstance(containers, list):
+            return list(set(result)) if result else None
+
         for container in containers:
             env_from = container.env_from
             if not isinstance(env_from, list):
@@ -140,10 +143,11 @@ class GetDeploymentAssociations:
             if not isinstance(env, list):
                 continue
             for env_var in env:
-                if getattr(env_var.value_from, "config_map_key_ref", None) is not None:
-                    result.append(env_var.value_from.config_map_key_ref.name)
+                value_from = getattr(env_var, "value_from", None)
+                if value_from is not None and getattr(value_from, "config_map_key_ref", None) is not None:
+                    result.append(value_from.config_map_key_ref.name)
 
-        return set(result) if result else None
+        return list(set(result)) if result else None
 
     def get_associated_secret(self, deployment) -> Optional[List[str]]:
         """
@@ -160,6 +164,9 @@ class GetDeploymentAssociations:
             if getattr(volume, "secret", None) is not None:
                 result.append(volume.secret.secret_name)
 
+        if not isinstance(containers, list):
+            return list(set(result)) if result else None
+
         for container in containers:
             env_from = container.env_from
             if not isinstance(env_from, list):
@@ -172,10 +179,11 @@ class GetDeploymentAssociations:
             if not isinstance(env, list):
                 continue
             for env_var in env:
-                if getattr(env_var.value_from, "secret_key_ref", None) is not None:
-                    result.append(env_var.value_from.secret_key_ref.name)
+                value_from = getattr(env_var, "value_from", None)
+                if value_from is not None and getattr(value_from, "secret_key_ref", None) is not None:
+                    result.append(value_from.secret_key_ref.name)
 
-        return set(result) if result else None
+        return list(set(result)) if result else None
 
     def get_associated_pvc(self, deployment) -> Optional[List[str]]:
         """
