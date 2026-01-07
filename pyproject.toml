@@ -1,6 +1,6 @@
 [project]
 name = "kbackup"
-version = "0.2.0"
+version = "0.2.1"
 description = "kubernetes manifest backup with well-structured folder"
 readme = "README.md"
 authors = [{name = "Ahmad Bayhaqi"}]
