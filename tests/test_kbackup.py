@@ -6,6 +6,8 @@ from click.testing import CliRunner
 from kbackup.cli import cli
 from kbackup.backup import (
     _load_jq_filter,
+    _parse_namespaces,
+    _process_values,
     BackupConfig,
     KubernetesClientManager,
     ClusterBackupService,
@@ -115,6 +117,46 @@ def test_cluster_command_with_exclude_namespaces(mock_service_class):
 
 
 @patch("kbackup.cli.ClusterBackupService")
+def test_cluster_command_with_comma_separated_excludes(mock_service_class):
+    """Test cluster command with comma-separated exclude values."""
+    runner = CliRunner()
+    mock_service = Mock()
+    mock_service_class.return_value = mock_service
+
+    with runner.isolated_filesystem():
+        result = runner.invoke(
+            cli,
+            ["cluster", "test-context", "-e", "ns1,ns2,ns3"],
+        )
+        
+        call_kwargs = mock_service_class.call_args[1]
+        # Should receive the comma-separated string
+        assert "ns1,ns2,ns3" in call_kwargs["exclude_namespaces"]
+
+
+@patch("kbackup.cli.ClusterBackupService")
+def test_cluster_command_with_exclude_file(mock_service_class):
+    """Test cluster command with exclude file using @ prefix."""
+    runner = CliRunner()
+    mock_service = Mock()
+    mock_service_class.return_value = mock_service
+
+    with runner.isolated_filesystem():
+        # Create exclude file
+        exclude_file = Path("exclude.txt")
+        exclude_file.write_text("ns1 ns2\nns3, ns4")
+        
+        result = runner.invoke(
+            cli,
+            ["cluster", "test-context", "-e", "@exclude.txt"],
+        )
+        
+        call_kwargs = mock_service_class.call_args[1]
+        # Should receive the file reference with @ prefix
+        assert "@exclude.txt" in call_kwargs["exclude_namespaces"]
+
+
+@patch("kbackup.cli.ClusterBackupService")
 def test_cluster_command_with_custom_output_dir(mock_service_class):
     """Test cluster command with custom output directory."""
     runner = CliRunner()
@@ -184,6 +226,137 @@ def test_load_jq_filter_nonexistent_file():
     filter_str = "nonexistent.txt"
     result = _load_jq_filter(filter_str)
     assert result == filter_str
+
+
+def test_parse_exclude_namespaces_space_delimited():
+    """Test parsing space-delimited namespaces."""
+    content = "ns1 ns2 ns3"
+    result = _parse_namespaces(content)
+    assert result == {"ns1", "ns2", "ns3"}
+
+
+def test_parse_exclude_namespaces_comma_delimited():
+    """Test parsing comma-delimited namespaces."""
+    content = "ns1, ns2, ns3"
+    result = _parse_namespaces(content)
+    assert result == {"ns1", "ns2", "ns3"}
+
+
+def test_parse_exclude_namespaces_newline_delimited():
+    """Test parsing newline-delimited namespaces."""
+    content = "ns1\nns2\nns3"
+    result = _parse_namespaces(content)
+    assert result == {"ns1", "ns2", "ns3"}
+
+
+def test_parse_exclude_namespaces_mixed_delimiters():
+    """Test parsing mixed delimiters."""
+    content = """# Space delimited
+kube-system kube-public
+
+# Comma delimited
+monitoring, logging, ingress-system
+
+# One per line
+istio-system
+prometheus
+
+# Mixed
+grafana loki, jaeger
+"""
+    result = _parse_namespaces(content)
+    expected = {
+        "kube-system", "kube-public", "monitoring", "logging",
+        "ingress-system", "istio-system", "prometheus", 
+        "grafana", "loki", "jaeger"
+    }
+    assert result == expected
+
+
+def test_parse_exclude_namespaces_with_comments():
+    """Test parsing properly filters out comments."""
+    content = """# This is a comment
+ns1 ns2
+# Another comment
+ns3, ns4
+"""
+    result = _parse_namespaces(content)
+    # Comments should be filtered out
+    assert result == {"ns1", "ns2", "ns3", "ns4"}
+    assert "#" not in result
+    assert "comment" not in result
+
+
+def test_parse_exclude_namespaces_with_inline_comments():
+    """Test parsing with inline comments."""
+    content = """ns1 ns2  # inline comment
+ns3, ns4  # another inline comment
+ns5  # comment after single namespace
+"""
+    result = _parse_namespaces(content)
+    assert result == {"ns1", "ns2", "ns3", "ns4", "ns5"}
+    assert "inline" not in result
+    assert "comment" not in result
+
+
+def test_process_exclude_values_single():
+    """Test processing single exclude values."""
+    result = _process_values(("ns1", "ns2"))
+    assert result == {"ns1", "ns2"}
+
+
+def test_process_exclude_values_comma_separated():
+    """Test processing comma-separated values."""
+    result = _process_values(("ns1,ns2,ns3",))
+    assert result == {"ns1", "ns2", "ns3"}
+
+
+def test_process_exclude_values_mixed():
+    """Test processing mixed single and comma-separated values."""
+    result = _process_values(("ns1", "ns2,ns3", "ns4"))
+    assert result == {"ns1", "ns2", "ns3", "ns4"}
+
+
+def test_process_exclude_values_file_reference(tmp_path):
+    """Test processing file reference with @ prefix."""
+    exclude_file = tmp_path / "exclude.txt"
+    exclude_file.write_text("ns1 ns2\nns3, ns4")
+    
+    result = _process_values((f"@{exclude_file}",))
+    assert result == {"ns1", "ns2", "ns3", "ns4"}
+
+
+def test_process_exclude_values_file_and_inline(tmp_path):
+    """Test processing combination of file reference and inline values."""
+    exclude_file = tmp_path / "exclude.txt"
+    exclude_file.write_text("file-ns1 file-ns2")
+    
+    result = _process_values(("cli-ns1", f"@{exclude_file}", "cli-ns2,cli-ns3"))
+    assert result == {"cli-ns1", "cli-ns2", "cli-ns3", "file-ns1", "file-ns2"}
+
+
+def test_process_exclude_values_nonexistent_file():
+    """Test that non-existent file raises FileNotFoundError."""
+    with pytest.raises(FileNotFoundError, match="Exclude file not found"):
+        _process_values(("@nonexistent.txt",))
+
+
+def test_process_exclude_values_empty_file(tmp_path):
+    """Test that empty file raises ValueError."""
+    exclude_file = tmp_path / "exclude.txt"
+    exclude_file.write_text("   ")
+    
+    with pytest.raises(ValueError, match="Exclude file is empty"):
+        _process_values((f"@{exclude_file}",))
+
+
+def test_process_exclude_values_file_with_no_valid_namespaces(tmp_path):
+    """Test file with only whitespace and delimiters."""
+    exclude_file = tmp_path / "exclude.txt"
+    exclude_file.write_text("  ,  \n  ,  ")
+    
+    with pytest.raises(ValueError, match="No valid namespaces found"):
+        _process_values((f"@{exclude_file}",))
 
 
 def test_backup_config_default_excludes():

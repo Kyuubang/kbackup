@@ -1,0 +1,43 @@
+# ============================================================================
+# kbackup - Exclude Namespaces Configuration
+# ============================================================================
+# This file defines namespaces to exclude from Kubernetes cluster backups.
+# Supports multiple delimiter formats for maximum flexibility.
+#
+# Usage: kbackup cluster <context> --exclude @exclude_namespaces.txt
+#
+# Format Support:
+#   - Space-delimited: ns1 ns2 ns3
+#   - Comma-delimited: ns1, ns2, ns3
+#   - Newline-delimited: One namespace per line
+#   - Comments: Lines starting with # are ignored
+#   - Inline comments: Everything after # is ignored
+#   - Mix any combination of the above formats
+# ============================================================================
+
+
+# ----------------------------------------------------------------------------
+# System Namespaces (typically managed by Kubernetes itself)
+# ----------------------------------------------------------------------------
+# Space-delimited for quick listing
+kube-system kube-public kube-node-lease
+
+
+# ----------------------------------------------------------------------------
+# Infrastructure & Platform Namespaces
+# ----------------------------------------------------------------------------
+# Comma-delimited format
+ingress-nginx, ingress-system, cert-manager, external-dns
+
+
+# ----------------------------------------------------------------------------
+# Monitoring & Observability Stack
+# ----------------------------------------------------------------------------
+# One namespace per line for better readability
+monitoring
+prometheus
+grafana
+alertmanager
+loki
+tempo
+jaeger

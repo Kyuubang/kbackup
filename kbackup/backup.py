@@ -46,6 +46,88 @@ def _load_jq_filter(filter_input: str) -> str:
     return filter_input
 
 
+def _parse_namespaces(content: str) -> Set[str]:
+    """
+    Parse namespace names from content string.
+    Supports space, comma, and newline delimited values.
+    Supports comments starting with #.
+
+    Args:
+        content: String content containing namespaces
+
+    Returns:
+        Set of namespace names
+    """
+    namespaces = set()
+    
+    # Process each line
+    for line in content.split('\n'):
+        # Remove comments (everything after #)
+        if '#' in line:
+            line = line[:line.index('#')]
+        
+        # Replace commas with spaces
+        line = line.replace(',', ' ')
+        
+        # Split by whitespace and filter out empty strings
+        tokens = line.split()
+        for token in tokens:
+            token = token.strip()
+            if token:
+                namespaces.add(token)
+    
+    return namespaces
+
+
+def _process_values(values: Tuple[str, ...]) -> Set[str]:
+    """
+    Process exclude values from CLI options.
+    Supports:
+    - Single values: 'ns1'
+    - Comma-separated values: 'ns1,ns2,ns3'
+    - File references with @ prefix: '@filename.txt'
+    - Multiple values via repeated option
+
+    Args:
+        values: Tuple of values from CLI
+
+    Returns:
+        Set of namespace names to exclude
+
+    Raises:
+        FileNotFoundError: If a file reference doesn't exist
+        ValueError: If a file is empty or contains no valid namespaces
+    """
+    namespaces = set()
+    
+    for value in values:
+        # Check if it's a file reference (starts with @)
+        if value.startswith('@'):
+            file_path = Path(value[1:])  # Remove @ prefix
+            
+            if not file_path.is_file():
+                raise FileNotFoundError(f"Exclude file not found: {file_path}")
+            
+            logger.info(f"Loading exclude namespaces from file: {file_path}")
+            content = file_path.read_text(encoding="utf-8").strip()
+            
+            if not content:
+                raise ValueError(f"Exclude file is empty: {file_path}")
+            
+            file_namespaces = _parse_namespaces(content)
+            if not file_namespaces:
+                raise ValueError(f"No valid namespaces found in exclude file: {file_path}")
+            
+            logger.info(f"Loaded {len(file_namespaces)} namespace(s) from exclude file")
+            namespaces.update(file_namespaces)
+        else:
+            # Parse as comma-separated or single value
+            parsed = _parse_namespaces(value)
+            namespaces.update(parsed)
+    
+    return namespaces
+
+
 class BackupConfig:
     """Configuration for cluster backup operations."""
 
@@ -112,7 +194,7 @@ class ClusterBackupService:
         Args:
             context: Kubernetes context name
             jq_filter: jq filter string or path to file containing the filter
-            exclude_namespaces: Tuple of namespaces to exclude
+            exclude_namespaces: Tuple of namespaces to exclude (supports single values, comma-separated values, and file references with @ prefix)
             output_dir: Output directory for backups
             ingress_first: If True, organize backup by ingress first
         """
@@ -124,7 +206,8 @@ class ClusterBackupService:
         # Combine default excludes with user-provided excludes
         self.exclude_namespaces: Set[str] = set(BackupConfig.DEFAULT_EXCLUDE_NAMESPACES)
         if exclude_namespaces:
-            self.exclude_namespaces.update(exclude_namespaces)
+            user_excludes = _process_values(exclude_namespaces)
+            self.exclude_namespaces.update(user_excludes)
 
         # Initialize Kubernetes clients
         self.k8s_clients = KubernetesClientManager(context)
