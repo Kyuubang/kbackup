@@ -643,7 +643,7 @@ class FileManager:
             except ValueError:
                 # Path is not relative to cwd, use absolute path
                 display_path = path_obj.resolve()
-            
+
             self.logger.info(f"Directory created/verified: {display_path}")
             return path_obj
 
@@ -904,9 +904,9 @@ class FileManager:
 
                         app_path = namespace_path / application
                         created_dir = self.create_directory(app_path)
-                        directory_structure[cluster_name][namespace][application] = (
-                            created_dir
-                        )
+                        directory_structure[cluster_name][namespace][
+                            application
+                        ] = created_dir
 
                         self.logger.debug(
                             f"Created application directory: {created_dir}"
