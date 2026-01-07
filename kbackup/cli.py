@@ -33,7 +33,7 @@ def cli():
     "--exclude",
     "exclude_namespaces",
     multiple=True,
-    help="namespace(s) to exclude from backup",
+    help="namespace(s) to exclude: single value, comma-separated 'ns1,ns2', or file '@file.txt'",
 )
 @click.option(
     "--dry-run",
@@ -64,7 +64,7 @@ def cluster_backup(
 
     Backup all deployments and their associated resources from a Kubernetes cluster.
     Use --filter to customize manifest field filtering with jq syntax.
-    Use --exclude to skip specific namespaces.
+    Use --exclude to skip specific namespaces (supports single, comma-separated, or file with @ prefix).
     Use --ingress-first to organize backup by ingress first.
     """
     try:
