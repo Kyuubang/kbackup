@@ -115,8 +115,10 @@ class GetDeploymentAssociations:
 
     def get_associated_configmap(self, deployment) -> Optional[List[str]]:
         """
-        Retrieve names of ConfigMaps associated with the given deployment.
+        Retrieve names of ConfigMaps associated with the given deployment within volumes, envFrom, and env.
         """
+        containers = deployment.spec.template.spec.containers
+
         volumes = deployment.spec.template.spec.volumes
         if not isinstance(volumes, list):
             return None
@@ -126,9 +128,29 @@ class GetDeploymentAssociations:
             if getattr(volume, "config_map", None) is not None:
                 result.append(volume.config_map.name)
 
-        return result if result else None
+        for container in containers:
+            env_from = container.env_from
+            if not isinstance(env_from, list):
+                continue
+            for env in env_from:
+                if getattr(env, "config_map_ref", None) is not None:
+                    result.append(env.config_map_ref.name)
+            
+            env = container.env
+            if not isinstance(env, list):
+                continue
+            for env_var in env:
+                if getattr(env_var.value_from, "config_map_key_ref", None) is not None:
+                    result.append(env_var.value_from.config_map_key_ref.name)
+
+        return set(result) if result else None
 
     def get_associated_secret(self, deployment) -> Optional[List[str]]:
+        """
+        Retrieve names of Secrets associated with the given deployment within volumes, envFrom, and env.
+        """
+        containers = deployment.spec.template.spec.containers
+
         volumes = deployment.spec.template.spec.volumes
         if not isinstance(volumes, list):
             return None
@@ -137,7 +159,23 @@ class GetDeploymentAssociations:
         for volume in volumes:
             if getattr(volume, "secret", None) is not None:
                 result.append(volume.secret.secret_name)
-        return result if result else None
+
+        for container in containers:
+            env_from = container.env_from
+            if not isinstance(env_from, list):
+                continue
+            for env in env_from:
+                if getattr(env, "secret_ref", None) is not None:
+                    result.append(env.secret_ref.name)
+            
+            env = container.env
+            if not isinstance(env, list):
+                continue
+            for env_var in env:
+                if getattr(env_var.value_from, "secret_key_ref", None) is not None:
+                    result.append(env_var.value_from.secret_key_ref.name)
+
+        return set(result) if result else None
 
     def get_associated_pvc(self, deployment) -> Optional[List[str]]:
         """
