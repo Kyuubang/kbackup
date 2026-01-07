@@ -118,34 +118,35 @@ class GetDeploymentAssociations:
         Retrieve names of ConfigMaps associated with the given deployment within volumes, envFrom, and env.
         """
         containers = deployment.spec.template.spec.containers
-
         volumes = deployment.spec.template.spec.volumes
-        if not isinstance(volumes, list):
-            return None
 
         result = []
-        for volume in volumes:
-            if getattr(volume, "config_map", None) is not None:
-                result.append(volume.config_map.name)
+        
+        # Check volumes for ConfigMaps
+        if isinstance(volumes, list):
+            for volume in volumes:
+                if getattr(volume, "config_map", None) is not None:
+                    result.append(volume.config_map.name)
 
         if not isinstance(containers, list):
             return list(set(result)) if result else None
 
         for container in containers:
-            env_from = container.env_from
-            if not isinstance(env_from, list):
-                continue
-            for env in env_from:
-                if getattr(env, "config_map_ref", None) is not None:
-                    result.append(env.config_map_ref.name)
+            env_from = getattr(container, "env_from", None)
+            if env_from is not None and isinstance(env_from, list):
+                for env in env_from:
+                    config_map_ref = getattr(env, "config_map_ref", None)
+                    if config_map_ref is not None:
+                        result.append(config_map_ref.name)
             
-            env = container.env
-            if not isinstance(env, list):
-                continue
-            for env_var in env:
-                value_from = getattr(env_var, "value_from", None)
-                if value_from is not None and getattr(value_from, "config_map_key_ref", None) is not None:
-                    result.append(value_from.config_map_key_ref.name)
+            env = getattr(container, "env", None)
+            if env is not None and isinstance(env, list):
+                for env_var in env:
+                    value_from = getattr(env_var, "value_from", None)
+                    if value_from is not None:
+                        config_map_key_ref = getattr(value_from, "config_map_key_ref", None)
+                        if config_map_key_ref is not None:
+                            result.append(config_map_key_ref.name)
 
         return list(set(result)) if result else None
 
@@ -154,34 +155,35 @@ class GetDeploymentAssociations:
         Retrieve names of Secrets associated with the given deployment within volumes, envFrom, and env.
         """
         containers = deployment.spec.template.spec.containers
-
         volumes = deployment.spec.template.spec.volumes
-        if not isinstance(volumes, list):
-            return None
 
         result = []
-        for volume in volumes:
-            if getattr(volume, "secret", None) is not None:
-                result.append(volume.secret.secret_name)
+        
+        # Check volumes for Secrets
+        if isinstance(volumes, list):
+            for volume in volumes:
+                if getattr(volume, "secret", None) is not None:
+                    result.append(volume.secret.secret_name)
 
         if not isinstance(containers, list):
             return list(set(result)) if result else None
 
         for container in containers:
-            env_from = container.env_from
-            if not isinstance(env_from, list):
-                continue
-            for env in env_from:
-                if getattr(env, "secret_ref", None) is not None:
-                    result.append(env.secret_ref.name)
+            env_from = getattr(container, "env_from", None)
+            if env_from is not None and isinstance(env_from, list):
+                for env in env_from:
+                    secret_ref = getattr(env, "secret_ref", None)
+                    if secret_ref is not None:
+                        result.append(secret_ref.name)
             
-            env = container.env
-            if not isinstance(env, list):
-                continue
-            for env_var in env:
-                value_from = getattr(env_var, "value_from", None)
-                if value_from is not None and getattr(value_from, "secret_key_ref", None) is not None:
-                    result.append(value_from.secret_key_ref.name)
+            env = getattr(container, "env", None)
+            if env is not None and isinstance(env, list):
+                for env_var in env:
+                    value_from = getattr(env_var, "value_from", None)
+                    if value_from is not None:
+                        secret_key_ref = getattr(value_from, "secret_key_ref", None)
+                        if secret_key_ref is not None:
+                            result.append(secret_key_ref.name)
 
         return list(set(result)) if result else None
 
