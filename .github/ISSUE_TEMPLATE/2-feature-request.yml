@@ -4,7 +4,6 @@ title: "[Feature]: "
 labels: [ "enhancement" ]
 assignees:
 - Kyuubang
-type: feature
 body:
 - type: markdown
   attributes:
