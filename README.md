@@ -15,6 +15,12 @@ Install this tool using `pip`:
 ```bash
 pip install kbackup
 ```
+
+To install latest development version:
+```bash
+pip install pip install git+https://github.com/Kyuubang/kbackup.git
+```
+
 ## Usage
 
 For help, run:
