@@ -11,15 +11,6 @@ body:
       ## 🚀 Feature Request
       Thanks for taking the time to suggest a new feature! Your ideas help make kbackup better for everyone.
 
-- type: input
-  id: contact
-  attributes:
-    label: Contact Details
-    description: How can we get in touch with you if we need more info?
-    placeholder: ex. email@example.com
-  validations:
-    required: false
-
 - type: textarea
   id: problem
   attributes:
