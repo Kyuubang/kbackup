@@ -462,22 +462,23 @@ class ClusterBackupService:
             logger.warning(f"Failed to backup service for {deploy_name}: {e}")
 
         # backup associated ingress
-        try:
-            service_name = self.associations.get_associated_service(
-                deployment, namespace
-            )
-            ingress = self.associations.get_associated_ingress(service_name, namespace)
-            if ingress:
-                logger.info(
-                    f"Backing up ingress: {ingress} for deployment: {deploy_name}"
+        if not self.ingress_first:
+            try:
+                service_name = self.associations.get_associated_service(
+                    deployment, namespace
                 )
-                ingress_data = self.serializer.get_ingress(ingress, namespace)
-                ingress_yaml = self.yaml_formatter.format_kubernetes_resource(
-                    ingress_data, self.jq_filter
-                )
-                resources["ingress"] = ingress_yaml
-        except Exception as e:
-            logger.warning(f"Failed to backup ingress for {deploy_name}: {e}")
+                ingress = self.associations.get_associated_ingress(service_name, namespace)
+                if ingress:
+                    logger.info(
+                        f"Backing up ingress: {ingress} for deployment: {deploy_name}"
+                    )
+                    ingress_data = self.serializer.get_ingress(ingress, namespace)
+                    ingress_yaml = self.yaml_formatter.format_kubernetes_resource(
+                        ingress_data, self.jq_filter
+                    )
+                    resources["ingress"] = ingress_yaml
+            except Exception as e:
+                logger.warning(f"Failed to backup ingress for {deploy_name}: {e}")
 
         # backup associated SecretProviderClass
         try:
